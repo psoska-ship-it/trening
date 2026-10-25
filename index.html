@@ -35,9 +35,9 @@
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <span>Gemini Coach</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v5.1 API Fix</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v5.2 AI Pro</span>
         </h1>
-        <p class="text-slate-400 text-xs">Přímá AI integrace, Strava Sync & Cviky</p>
+        <p class="text-slate-400 text-xs">AI analýzy, Strava Sync & Strukturované cviky</p>
       </div>
     </div>
 
@@ -247,7 +247,7 @@
       <div class="space-y-4">
         <div class="p-3 bg-indigo-950/30 border border-indigo-900/50 rounded-lg">
           <label class="text-[11px] font-bold uppercase text-indigo-400">Gemini AI Key</label>
-          <p class="text-[10px] text-slate-400 mb-2">Potřebný pro přímé AI analýzy v aplikaci. Získáš zdarma na Google AI Studio.</p>
+          <p class="text-[10px] text-slate-400 mb-2">Potřebný pro přímé AI analýzy v aplikaci.</p>
           <input type="password" id="gemini-api-key" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
         </div>
 
@@ -265,7 +265,7 @@
     </div>
   </div>
 
-  <!-- OSTATNÍ MODALY (Záznam a Cviky zůstávají stejné) -->
+  <!-- OSTATNÍ MODALY (Záznam a Cviky) -->
   <div id="add-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="card p-5 md:p-6 rounded-2xl max-w-md w-full shadow-2xl border-indigo-500/40">
       <h3 class="font-bold text-lg text-slate-200 mb-4"><i class="fa-solid fa-plus text-indigo-400 mr-2"></i> Nový ruční záznam</h3>
@@ -483,9 +483,9 @@
       if (chartInst) chartInst.destroy();
       chartInst = new Chart(document.getElementById('loadChart').getContext('2d'), {
         type: 'line', data: { labels, datasets: [
-          { label: 'CTL', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 1 },
-          { label: 'ATL', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 1 },
-          { label: 'TSB', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 1 }
+          { label: 'Kondice (CTL)', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 1 },
+          { label: 'Únava (ATL)', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 1 },
+          { label: 'Forma (TSB)', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 1 }
         ]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { color: '#cbd5e1', font: { size: 11, family: 'sans-serif' } } } }, scales: { x: { display: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b', maxTicksLimit: 6 } }, y: { display: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } } } }
       });
     }
@@ -522,18 +522,18 @@
       }
     }
 
-    // --- PŘÍMÁ AI INTEGRACE PŘES GEMINI API (v5.1 Fix) ---
+    // --- PŘÍMÁ AI INTEGRACE PŘES GEMINI API (v5.2 AI Pro Fallback) ---
     function zavritAIModal() { document.getElementById('ai-modal').classList.add('hidden'); }
 
     async function zeptejSeGemini(tema, filterTyp = null) {
       const apiKey = localStorage.getItem('gemini_api_key');
       if (!apiKey) {
-        alert("Pro přímou AI analýzu musíš vložit svůj Gemini API klíč v Nastavení (ikona ozubeného kola). Získáš ho zdarma na Google AI Studio.");
+        alert("Pro přímou AI analýzu musíš vložit svůj Gemini API klíč v Nastavení (ikona ozubeného kola).");
         otevritNastaveniModal();
         return;
       }
 
-      // Sestavení promptu pro mě
+      // Sestavení promptu
       const poleReverse = [...aktivity].reverse();
       let zajmovaAktivita = poleReverse[0]; 
       if (filterTyp) zajmovaAktivita = poleReverse.find(a => a.typ === filterTyp) || zajmovaAktivita;
@@ -564,24 +564,36 @@ Prům. tep: ${zajmovaAktivita.avgHr} bpm, TSS: ${zajmovaAktivita.tss}${detailCvi
       document.getElementById('ai-content').innerHTML = "";
 
       try {
-        // TADY JE TA ZMĚNA: gemini-1.5-flash-latest
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+        let apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+        
+        let response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
         });
 
-        const data = await response.json();
+        let data = await response.json();
         
+        // ZÁCHRANNÁ BRZDA: Pokud API 1.5 Pro nenajde, přepni na základní model
+        if (data.error && (data.error.code === 404 || data.error.message.includes('not found'))) {
+           apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+           response = await fetch(apiUrl, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+           });
+           data = await response.json();
+        }
+
         if (data.error) { throw new Error(data.error.message); }
 
         let odpoved = data.candidates[0].content.parts[0].text;
         
-        // Jednoduchý převod Markdownu do HTML pro hezké zobrazení
-        odpoved = odpoved.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); // Bold
-        odpoved = odpoved.replace(/\*(.*?)\*/g, '<i>$1</i>'); // Italics
-        odpoved = odpoved.replace(/\n\*/g, '<br>•'); // Bullet points
-        odpoved = odpoved.replace(/\n/g, '<br>'); // New lines
+        // Formátování Markdownu
+        odpoved = odpoved.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); 
+        odpoved = odpoved.replace(/\*(.*?)\*/g, '<i>$1</i>'); 
+        odpoved = odpoved.replace(/\n\*/g, '<br>•'); 
+        odpoved = odpoved.replace(/\n/g, '<br>'); 
 
         document.getElementById('ai-loading').classList.add('hidden');
         document.getElementById('ai-content').classList.remove('hidden');
