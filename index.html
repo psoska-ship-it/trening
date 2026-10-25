@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Gemini Coach & Strava Performance</title>
 
+  <!-- iOS PWA podpora -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Trénink">
@@ -17,7 +18,6 @@
     body { background-color: #0b1120; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     .card { background: #131d31; border: 1px solid #1e293b; }
     .gemini-gradient { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%); }
-    .gemini-border { border-color: rgba(139, 92, 246, 0.4); }
   </style>
 </head>
 <body class="p-3 md:p-6 max-w-6xl mx-auto pb-16">
@@ -31,9 +31,9 @@
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <span>Gemini Coach</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v3.8 Split</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v3.9 Pro</span>
         </h1>
-        <p class="text-slate-400 text-xs">PWA, detailní disciplíny & Strava Sync</p>
+        <p class="text-slate-400 text-xs">Vlastní cviky, čitelné grafy & chytrý Strava Sync</p>
       </div>
     </div>
 
@@ -94,7 +94,7 @@
     </div>
   </section>
 
-  <!-- DETAILNÍ ROZBOR PODLE DISCIPLÍN (Rozděleno na 3 sekce) -->
+  <!-- DETAILNÍ ROZBOR PODLE DISCIPLÍN -->
   <section class="mt-8 mb-2">
     <h3 class="font-bold text-sm md:text-base text-slate-200 flex items-center gap-2 mb-3">
       <i class="fa-solid fa-magnifying-glass-chart text-orange-400"></i> Rozbor posledních tréninků
@@ -148,7 +148,7 @@
                 <div class="text-xs font-bold text-amber-400 mt-0.5" id="sila-vol">-</div>
               </div>
               <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
-                <div class="text-[9px] text-slate-400 uppercase">Tep / TSS (odhad)</div>
+                <div class="text-[9px] text-slate-400 uppercase">Tep / TSS</div>
                 <div class="text-xs font-bold text-rose-400 mt-0.5" id="sila-hr">-</div>
               </div>
             </div>
@@ -157,9 +157,13 @@
             </div>
           </div>
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-800/80">
-          <button onclick="exportProGemini('posilovani')" class="w-full bg-slate-800 hover:bg-slate-700 text-indigo-300 py-2 rounded-lg border border-slate-700 transition text-xs font-semibold">
-            🏋️ Zhodnotit cviky a váhy
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex gap-2">
+          <!-- Nové tlačítko pro ruční zápis cviků -->
+          <button onclick="otevritCvikyModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg border border-slate-700 transition text-xs font-semibold">
+            📝 Zapsat cviky
+          </button>
+          <button onclick="exportProGemini('posilovani')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 py-2 rounded-lg border border-slate-700 transition text-xs font-semibold">
+            🏋️ Rozebrat
           </button>
         </div>
       </div>
@@ -198,14 +202,15 @@
     </div>
   </section>
 
-  <!-- Graf vývoje formy -->
+  <!-- Graf vývoje formy s čitelnými osami -->
   <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-sm md:text-base font-bold text-slate-200 flex items-center gap-2">
-        <i class="fa-solid fa-chart-line text-slate-400"></i> Křivka formy a adaptace
+        <i class="fa-solid fa-chart-line text-slate-400"></i> Křivka formy a adaptace (posledních 30 dní)
       </h2>
     </div>
-    <div class="relative h-56 md:h-64 w-full">
+    <!-- Zvětšena výška grafu, aby bylo místo pro osy -->
+    <div class="relative h-72 w-full">
       <canvas id="loadChart"></canvas>
     </div>
   </section>
@@ -265,6 +270,23 @@
     </div>
   </div>
 
+  <!-- iOS-SAFE MODAL: Cviky (Nové okno) -->
+  <div id="cviky-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="card p-5 md:p-6 rounded-2xl max-w-md w-full shadow-2xl border-indigo-500/40">
+      <h3 class="font-bold text-lg text-slate-200 mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Zapsat detaily tréninku
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">Zapiš partii, cviky, váhy a série. Uloží se k tvému nejnovějšímu silovému tréninku.</p>
+      
+      <textarea id="cviky-text" rows="5" placeholder="Např: Dnes nohy a střed těla.&#10;Dřepy 4x10 (80kg)&#10;Výpady 3x12 (20kg)&#10;Plank 3x 1 min..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500"></textarea>
+      
+      <div class="mt-5 flex gap-2">
+        <button onclick="ulozitCviky()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs font-bold transition">Uložit k tréninku</button>
+        <button onclick="zavritCvikyModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-xs font-semibold">Zrušit</button>
+      </div>
+    </div>
+  </div>
+
   <!-- iOS-SAFE MODAL: Strava -->
   <div id="strava-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="card p-6 rounded-2xl max-w-md w-full shadow-2xl border-orange-500/40">
@@ -288,12 +310,12 @@
   </div>
 
   <script>
-    // Aktualizovaná výchozí data (obsahují Kolo, Sílu i Chůzi)
+    // Aktualizovaná výchozí data
     let aktivity = JSON.parse(localStorage.getItem('strava_live_activities')) || [
-      { id: 1, datum: "2026-10-16", zdroj: "Strava", typ: "Kolo", nazev: "MTB Vysočina", km: 45, nastoupano: 780, cas: 110, avgHr: 156, tss: 135 },
-      { id: 2, datum: "2026-10-19", zdroj: "Manual", typ: "Síla", nazev: "Ranní silový trénink nohou", km: 0, nastoupano: 0, cas: 85, avgHr: 126, tss: 70 },
-      { id: 3, datum: "2026-10-23", zdroj: "Strava", typ: "Kolo", nazev: "Podzimní Z2 vytrvalost", km: 54, nastoupano: 520, cas: 135, avgHr: 138, tss: 84 },
-      { id: 4, datum: "2026-10-24", zdroj: "Manual", typ: "Chůze", nazev: "Večerní chůze na vyvětrání", km: 4, nastoupano: 45, cas: 50, avgHr: 95, tss: 18 }
+      { id: 1, datum: getRelativeDate(-4), zdroj: "Strava", typ: "Kolo", nazev: "MTB Vysočina", km: 45, nastoupano: 780, cas: 110, avgHr: 156, tss: 135 },
+      { id: 2, datum: getRelativeDate(-2), zdroj: "Manual", typ: "Síla", nazev: "Silový trénink", km: 0, nastoupano: 0, cas: 85, avgHr: 126, tss: 70, cviky: "Leg press 4x12 (120kg), Výpady..." },
+      { id: 3, datum: getRelativeDate(-1), zdroj: "Strava", typ: "Kolo", nazev: "Z2 vytrvalost", km: 54, nastoupano: 520, cas: 135, avgHr: 138, tss: 84 },
+      { id: 4, datum: getRelativeDate(0), zdroj: "Manual", typ: "Chůze", nazev: "Večerní chůze", km: 4, nastoupano: 45, cas: 50, avgHr: 95, tss: 18 }
     ];
 
     function getRelativeDate(offset) {
@@ -353,10 +375,12 @@
           data.forEach(act => {
             if (!aktivity.some(a => a.id === act.id)) {
               let tss = Math.round(act.distance/1000 * 1.6 + act.total_elevation_gain/15) || 50;
+              
+              // Chytřejší identifikace typu aktivity ze Stravy
               let typAkt = "Ostatní";
               if (act.type.includes('Ride')) typAkt = "Kolo";
-              else if (act.type === 'WeightTraining') typAkt = "Síla";
-              else if (act.type === 'Walk' || act.type === 'Hike') typAkt = "Chůze";
+              else if (['WeightTraining', 'Workout', 'Crossfit'].includes(act.type)) typAkt = "Síla";
+              else if (['Walk', 'Hike'].includes(act.type)) typAkt = "Chůze";
 
               aktivity.push({
                 id: act.id, datum: act.start_date_local.split('T')[0], zdroj: "Strava",
@@ -386,7 +410,12 @@
         const dayTSS = aktivity.filter(a => a.datum === dStr).reduce((sum, a) => sum + (Number(a.tss) || 0), 0);
         ctl = ctl + (dayTSS - ctl) * (1 - Math.exp(-1 / 42));
         atl = atl + (dayTSS - atl) * (1 - Math.exp(-1 / 7));
-        dates.push(dStr.slice(5)); ctlData.push(Math.round(ctl)); atlData.push(Math.round(atl)); tsbData.push(Math.round(ctl - atl));
+        
+        // Zkrátíme formát data pro graf (např. 25.10.)
+        const objDate = new Date(dStr);
+        const formatDate = `${objDate.getDate()}.${objDate.getMonth()+1}.`;
+        
+        dates.push(formatDate); ctlData.push(Math.round(ctl)); atlData.push(Math.round(atl)); tsbData.push(Math.round(ctl - atl));
       }
       document.getElementById('ctl-val').innerText = ctlData[29]; document.getElementById('atl-val').innerText = atlData[29];
       document.getElementById('tsb-val').innerText = (tsbData[29] > 0 ? "+" : "") + tsbData[29];
@@ -398,38 +427,36 @@
       vykresliTabulku(); aktualizujGraf(dates, ctlData, atlData, tsbData);
     }
 
-    // --- NOVÁ FUNKCE PRO 3 BLOKY ---
     function aktualizujRozdelenyRozbor() {
-      const poleReverse = [...aktivity].reverse(); // Poslední je první
+      const poleReverse = [...aktivity].reverse(); 
       
       // 1. Kolo
       const kolo = poleReverse.find(a => a.typ === 'Kolo');
       if (kolo) {
-        document.getElementById('kolo-date').innerText = kolo.datum;
-        document.getElementById('kolo-name').innerText = kolo.nazev;
+        document.getElementById('kolo-date').innerText = kolo.datum; document.getElementById('kolo-name').innerText = kolo.nazev;
         document.getElementById('kolo-vol').innerHTML = `${kolo.km} km<br>+${kolo.nastoupano || 0} m`;
         document.getElementById('kolo-hr').innerHTML = `Ø ${kolo.avgHr > 0 ? kolo.avgHr + ' bpm' : '-'}<br>${kolo.tss} TSS`;
-        document.getElementById('kolo-analysis').innerHTML = `Průměrná tepová zátěž ukazuje na <strong>${kolo.avgHr > 145 ? 'tempo' : 'vytrvalost'}</strong>. Nastoupané metry dobře stimulují silovou vytrvalost.`;
+        document.getElementById('kolo-analysis').innerHTML = `Průměrná tepová zátěž ukazuje na <strong>${kolo.avgHr > 145 ? 'tempo' : 'vytrvalost'}</strong>. Nastoupané metry stimulují silovou vytrvalost.`;
       }
       
       // 2. Síla
       const sila = poleReverse.find(a => a.typ === 'Síla');
       if (sila) {
-        document.getElementById('sila-date').innerText = sila.datum;
-        document.getElementById('sila-name').innerText = sila.nazev;
+        document.getElementById('sila-date').innerText = sila.datum; document.getElementById('sila-name').innerText = sila.nazev;
         document.getElementById('sila-vol').innerHTML = `${sila.cas} min<br>-`;
         document.getElementById('sila-hr').innerHTML = `Ø ${sila.avgHr > 0 ? sila.avgHr + ' bpm' : '-'}<br>~${sila.tss} TSS`;
-        document.getElementById('sila-analysis').innerHTML = `Tep neukazuje reálnou zátěž, ale <strong>${sila.tss} TSS</strong> odráží těžký neuromuskulární stres svalů.`;
+        
+        let cvikyNapis = sila.cviky ? `<br><br><span class="text-indigo-300 font-semibold">Zapsané cviky:</span> <span class="text-slate-400 italic">${sila.cviky.substring(0,40)}...</span>` : '';
+        document.getElementById('sila-analysis').innerHTML = `<strong>${sila.tss} TSS</strong> odráží neuromuskulární stres svalů, který Strava bez tepu nezachytí.${cvikyNapis}`;
       }
 
       // 3. Chůze
       const chuze = poleReverse.find(a => a.typ === 'Chůze' || a.typ === 'Volno');
       if (chuze) {
-        document.getElementById('chuze-date').innerText = chuze.datum;
-        document.getElementById('chuze-name').innerText = chuze.nazev;
+        document.getElementById('chuze-date').innerText = chuze.datum; document.getElementById('chuze-name').innerText = chuze.nazev;
         document.getElementById('chuze-vol').innerHTML = `${chuze.km > 0 ? chuze.km + ' km' : '-'}<br>${chuze.cas} min`;
         document.getElementById('chuze-hr').innerHTML = `${chuze.tss} TSS<br>-`;
-        document.getElementById('chuze-analysis').innerHTML = `Ideální kompenzační aktivita po směně nebo pro celkové vyvětrání hlavy s minimálním dopadem na únavu (ATL).`;
+        document.getElementById('chuze-analysis').innerHTML = `Výborná kompenzační aktivita pro prokrvení nohou po službě s minimálním dopadem na akutní únavu (ATL).`;
       }
     }
 
@@ -449,15 +476,41 @@
     let chartInst = null;
     function aktualizujGraf(labels, ctl, atl, tsb) {
       if (chartInst) chartInst.destroy();
+      
+      // Vylepšené osy a zobrazení v grafu
       chartInst = new Chart(document.getElementById('loadChart').getContext('2d'), {
-        type: 'line', data: { labels, datasets: [
-          { label: 'CTL', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 0 },
-          { label: 'ATL', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 0 },
-          { label: 'TSB', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 0 }
-        ]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+        type: 'line', 
+        data: { 
+          labels, 
+          datasets: [
+            { label: 'Kondice (CTL)', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 1 },
+            { label: 'Únava (ATL)', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 1 },
+            { label: 'Forma (TSB)', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 1 }
+          ]
+        }, 
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { 
+            legend: { display: true, labels: { color: '#cbd5e1', font: { size: 11, family: 'sans-serif' }, boxWidth: 12 } } 
+          }, 
+          scales: { 
+            x: { 
+              display: true, 
+              grid: { color: '#1e293b' }, 
+              ticks: { color: '#64748b', maxTicksLimit: 6 } // Zobrazí zhruba každý 5. den
+            },
+            y: { 
+              display: true, 
+              grid: { color: '#1e293b' }, 
+              ticks: { color: '#64748b' } 
+            }
+          } 
+        }
       });
     }
 
+    // MODAL FUNKCE
     function otevritAktivitaModal() { document.getElementById('add-modal').classList.remove('hidden'); }
     function zavritAktivitaModal() { document.getElementById('add-modal').classList.add('hidden'); }
 
@@ -474,10 +527,31 @@
 
     function smazatAktivitu(id) { aktivity = aktivity.filter(a => a.id !== id); ulozAktivity(); }
 
+    // NOVÉ: Okno na cviky
+    function otevritCvikyModal() {
+      const silaIndex = [...aktivity].reverse().findIndex(a => a.typ === 'Síla');
+      if (silaIndex === -1) { alert("Nemáš žádný silový trénink."); return; }
+      
+      const skutecnyIndex = aktivity.length - 1 - silaIndex;
+      document.getElementById('cviky-text').value = aktivity[skutecnyIndex].cviky || "";
+      document.getElementById('cviky-modal').classList.remove('hidden');
+    }
+    
+    function zavritCvikyModal() { document.getElementById('cviky-modal').classList.add('hidden'); }
+    
+    function ulozitCviky() {
+      const silaIndex = [...aktivity].reverse().findIndex(a => a.typ === 'Síla');
+      if (silaIndex !== -1) {
+        const skutecnyIndex = aktivity.length - 1 - silaIndex;
+        aktivity[skutecnyIndex].cviky = document.getElementById('cviky-text').value;
+        ulozAktivity();
+        zavritCvikyModal();
+      }
+    }
+
     function exportProGemini(tema) {
-      // Získáme konkrétní data podle toho, jaké tlačítko bylo stisknuto
       const poleReverse = [...aktivity].reverse();
-      let zajmovaAktivita = poleReverse[0]; // výchozí je ta úplně poslední
+      let zajmovaAktivita = poleReverse[0]; 
 
       if (tema === 'segmenty') zajmovaAktivita = poleReverse.find(a => a.typ === 'Kolo') || zajmovaAktivita;
       if (tema === 'posilovani') zajmovaAktivita = poleReverse.find(a => a.typ === 'Síla') || zajmovaAktivita;
@@ -486,7 +560,6 @@
       const text = `Ahoj, aktuální CTL: ${document.getElementById('ctl-val').innerText}, ATL: ${document.getElementById('atl-val').innerText}, TSB: ${document.getElementById('tsb-val').innerText}.\n\nKonkrétní jízda/trénink pro analýzu:\n${JSON.stringify(zajmovaAktivita, null, 2)}\n\nTéma dotazu: ${tema}. Pojďme na to.`;
       
       navigator.clipboard.writeText(text).then(() => {
-        // Vizuální odezva na všechny buttony
         document.querySelectorAll('button').forEach(btn => {
           if(btn.innerText.includes('Rozebrat') || btn.innerText.includes('Zhodnotit')) {
             const orig = btn.innerHTML;
