@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Gemini Coach & Strava Load</title>
+  <title>Gemini Coach & Strava Performance</title>
 
   <!-- iOS PWA podpora -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +23,7 @@
 </head>
 <body class="p-3 md:p-6 max-w-6xl mx-auto pb-16">
 
-  <!-- Horní lišta s AI avatarem a akcemi -->
+  <!-- Horní lišta -->
   <header class="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-800 gap-4">
     <div class="flex items-center gap-3">
       <div class="w-11 h-11 rounded-xl gemini-gradient flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
@@ -32,9 +32,9 @@
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <span>Gemini Coach</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v2.4 Pro</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v3.0 Pro</span>
         </h1>
-        <p class="text-slate-400 text-xs">Výkon, zátěž (CTL/ATL/TSB) & individuální plánování</p>
+        <p class="text-slate-400 text-xs">Výkonnostní audit, týdenní periodizace & Strava telemetrie</p>
       </div>
     </div>
 
@@ -42,8 +42,8 @@
       <button onclick="otevritStravaModal()" class="bg-[#fc4c02] hover:bg-[#e34402] text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
         <i class="fa-brands fa-strava text-sm"></i> Strava Sync
       </button>
-      <button onclick="exportProGemini()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
-        <i class="fa-solid fa-robot text-sm"></i> Konzultovat s AI
+      <button onclick="exportProGemini('komplexni')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
+        <i class="fa-solid fa-robot text-sm"></i> Rozebrat s Gemini v chatu
       </button>
       <button onclick="pridatAktivituModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
         <i class="fa-solid fa-plus text-xs"></i> Záznam
@@ -51,7 +51,7 @@
     </div>
   </header>
 
-  <!-- Hlavní ukazatele (CTL / ATL / TSB / Týden) -->
+  <!-- Hlavní metriky zátěže -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
     <div class="card p-4 rounded-xl shadow-sm">
       <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Kondice (CTL)</div>
@@ -61,7 +61,7 @@
     <div class="card p-4 rounded-xl shadow-sm">
       <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Únava (ATL)</div>
       <div class="text-2xl md:text-3xl font-black mt-1 text-rose-400" id="atl-val">0</div>
-      <div class="text-[11px] text-slate-400 mt-1">Akutní zátěž (7 dní)</div>
+      <div class="text-[11px] text-slate-400 mt-1">Akutní vyčerpání (7 dní)</div>
     </div>
     <div class="card p-4 rounded-xl shadow-sm">
       <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Forma / Čerstvost (TSB)</div>
@@ -69,518 +69,73 @@
       <div class="text-[11px] font-semibold mt-1 truncate" id="tsb-label">Počítám...</div>
     </div>
     <div class="card p-4 rounded-xl shadow-sm">
-      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Nastoupáno / Týden</div>
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Stoupání / Týden</div>
       <div class="text-2xl md:text-3xl font-black mt-1 text-amber-400" id="weekly-elev">0 <span class="text-xs font-normal text-slate-400">m</span></div>
       <div class="text-[11px] text-slate-400 mt-1" id="weekly-km">0 km na kole</div>
     </div>
   </section>
 
-  <!-- NOVÁ SEKCE: 1. Stav tréninku & 2. Na co se zaměřit -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-    
-    <!-- Okno 1: Stav tréninku -->
-    <section class="card p-5 rounded-xl shadow-sm border-l-4 border-l-emerald-500" id="status-card">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
-          <i class="fa-solid fa-gauge-high text-emerald-400"></i> Aktuální stav tréninku
-        </h3>
-        <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800" id="status-badge">Produktivní</span>
-      </div>
-      <div class="mt-3 text-xs text-slate-300 leading-relaxed" id="status-desc">
-        Kondice setrvale roste a akumulovaná únava je v optimálním poměru. Tělo je schopno plné adaptace.
-      </div>
-      <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Doporučená intenzita zítra:</span>
-        <span class="font-bold text-slate-200" id="status-intensity">Střední až vysoká (Z3 / Z4)</span>
-      </div>
-    </section>
-
-    <!-- Okno 2: Na co se zaměřit -->
-    <section class="card p-5 rounded-xl shadow-sm border-l-4 border-l-cyan-500">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
-          <i class="fa-solid fa-bullseye text-cyan-400"></i> Na co se teď zaměřit
-        </h3>
-        <span class="text-[10px] text-slate-400 font-mono">Fokus trenéra</span>
-      </div>
-      <ul class="mt-3 space-y-2 text-xs text-slate-300" id="focus-points">
-        <li class="flex items-start gap-2">
-          <i class="fa-solid fa-check text-cyan-400 mt-0.5"></i>
-          <span><strong>Kadence v kopcích:</strong> Držet stabilních 85–90 rpm, nepáčit těžké převody silově ze sedla.</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <i class="fa-solid fa-check text-cyan-400 mt-0.5"></i>
-          <span><strong>Ventilace a dech:</strong> Na rovinách v Z2 důsledný dech nosem, v kopcích hluboký rytmický výdech.</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <i class="fa-solid fa-check text-cyan-400 mt-0.5"></i>
-          <span><strong>Bílkoviny po výkonu:</strong> Po těžkých nohách nebo kopcích podpořit regeneraci svalové tkáně.</span>
-        </li>
-      </ul>
-    </section>
-
-  </div>
-
-  <!-- NOVÁ SEKCE: Rozbor posledního tréninku -->
-  <section class="card p-5 rounded-xl mt-5 shadow-sm border-slate-700/80">
-    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+  <!-- NOVÝ PŘEHLED: 5týdenní bilance & periodizace (styl rozboru) -->
+  <section class="card p-5 rounded-xl mt-5 shadow-sm border-indigo-500/30">
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-slate-800 gap-2">
       <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
-        <i class="fa-solid fa-magnifying-glass-chart text-orange-400"></i> Rozbor posledního tréninku
+        <i class="fa-solid fa-chart-column text-indigo-400"></i> Dlouhodobý audit tréninkového bloku (5 týdnů)
       </h3>
-      <span class="text-[11px] font-mono text-slate-400" id="last-workout-date">-</span>
-    </div>
-    
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-        <div class="text-[10px] text-slate-400 uppercase font-semibold">Aktivita</div>
-        <div class="text-sm font-bold text-slate-200 mt-1 truncate" id="last-workout-name">-</div>
-      </div>
-      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-        <div class="text-[10px] text-slate-400 uppercase font-semibold">Objem / Nastoupáno</div>
-        <div class="text-sm font-bold text-amber-400 mt-1" id="last-workout-volume">-</div>
-      </div>
-      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-        <div class="text-[10px] text-slate-400 uppercase font-semibold">Tepová odezva</div>
-        <div class="text-sm font-bold text-rose-400 mt-1" id="last-workout-hr">-</div>
-      </div>
-      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-        <div class="text-[10px] text-slate-400 uppercase font-semibold">Generovaný stres</div>
-        <div class="text-sm font-bold text-cyan-400 mt-1" id="last-workout-tss">-</div>
-      </div>
+      <span class="text-[11px] text-slate-400 font-mono">19. září – dnes</span>
     </div>
 
-    <div class="mt-4 p-3.5 rounded-lg bg-slate-900/40 border border-slate-800 text-xs text-slate-300 leading-relaxed" id="last-workout-analysis">
-      Analýza posledního tréninku se generuje...
-    </div>
-  </section>
-
-  <!-- NOVÁ SEKCE: Doporučený plán na následující dny -->
-  <section class="card p-5 rounded-xl mt-5 shadow-sm">
-    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-      <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
-        <i class="fa-solid fa-calendar-days text-indigo-400"></i> Doporučený plán na následující dny
-      </h3>
-      <span class="text-[10px] text-slate-400 font-mono">Dynamická adaptace dle TSB</span>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4" id="forecast-cards">
-      <!-- Generováno přes JS -->
-    </div>
-  </section>
-
-  <!-- Graf vývoje formy -->
-  <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-sm md:text-base font-bold text-slate-200 flex items-center gap-2">
-        <i class="fa-solid fa-chart-line text-slate-400"></i> Křivka formy a adaptace (posledních 30 dní)
-      </h2>
-      <div class="flex gap-3 text-[10px] md:text-xs font-medium">
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-cyan-400 rounded-sm"></span> CTL</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-rose-400 rounded-sm"></span> ATL</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></span> TSB</span>
-      </div>
-    </div>
-    <div class="relative h-56 md:h-64 w-full">
-      <canvas id="loadChart"></canvas>
-    </div>
-  </section>
-
-  <!-- Tabulka zón -->
-  <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
-    <div class="flex justify-between items-center mb-3">
-      <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-        <i class="fa-solid fa-lungs text-cyan-400"></i> Fyziologické tréninkové zóny (Tep • Dech • Kopce • Kadence)
-      </h3>
-      <span class="text-[10px] text-slate-400 font-mono">Vytrvalostní model</span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs text-slate-300">
-        <thead class="text-[10px] uppercase bg-slate-900/60 text-slate-400">
-          <tr>
-            <th class="p-2.5">Zóna</th>
-            <th class="p-2.5">Tepová frekvence</th>
-            <th class="p-2.5">Dechová frekvence & Ventilace</th>
-            <th class="p-2.5">Chování ve stoupání</th>
-            <th class="p-2.5">Kadence</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800/80 font-normal">
-          <tr class="hover:bg-slate-800/30">
-            <td class="p-2.5 font-bold text-slate-400">Z1 Regenerace</td>
-            <td class="p-2.5 font-mono text-cyan-400">&lt; 120 bpm</td>
-            <td class="p-2.5">Volný dech nosem, plynulá mluva</td>
-            <td class="p-2.5">Roviny, v kopci nejlehčí převod</td>
-            <td class="p-2.5">90–95 rpm</td>
-          </tr>
-          <tr class="hover:bg-slate-800/30 bg-emerald-950/10">
-            <td class="p-2.5 font-bold text-emerald-400">Z2 Vytrvalost</td>
-            <td class="p-2.5 font-mono text-emerald-400">120 – 142 bpm</td>
-            <td class="p-2.5">Rytmický dech, možná konverzace</td>
-            <td class="p-2.5">Mírná stoupání (2–4 %), plynulý tah</td>
-            <td class="p-2.5">85–90 rpm</td>
-          </tr>
-          <tr class="hover:bg-slate-800/30 bg-amber-950/10">
-            <td class="p-2.5 font-bold text-amber-400">Z3 SweetSpot / Tempo</td>
-            <td class="p-2.5 font-mono text-amber-400">143 – 158 bpm</td>
-            <td class="p-2.5">Hluboký dech ústy, krátké věty</td>
-            <td class="p-2.5">Táhlé kopce, silový tah, VAM ~800 m/h</td>
-            <td class="p-2.5">80–85 rpm</td>
-          </tr>
-          <tr class="hover:bg-slate-800/30 bg-orange-950/10">
-            <td class="p-2.5 font-bold text-orange-400">Z4 Laktátový práh</td>
-            <td class="p-2.5 font-mono text-orange-400">159 – 172 bpm</td>
-            <td class="p-2.5">Ventilační zlom, usilovný dech</td>
-            <td class="p-2.5">Strmá stoupání (6–10 %), limit</td>
-            <td class="p-2.5">75–85 rpm</td>
-          </tr>
-          <tr class="hover:bg-slate-800/30 bg-rose-950/10">
-            <td class="p-2.5 font-bold text-rose-400">Z5 VO2max</td>
-            <td class="p-2.5 font-mono text-rose-400">&gt; 173 bpm</td>
-            <td class="p-2.5">Hyperventilace, pálení nohou i plic</td>
-            <td class="p-2.5">Krátké ostré stojky ze sedla</td>
-            <td class="p-2.5">Max nástup</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Poslední aktivity -->
-  <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
-    <div class="flex justify-between items-center mb-3">
-      <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-        <i class="fa-solid fa-list-check text-slate-400"></i> Historie tréninků
-      </h3>
-      <span class="text-xs text-slate-400 font-mono" id="activity-count">0 záznamů</span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs md:text-sm text-slate-300">
-        <thead class="text-[10px] md:text-xs uppercase bg-slate-900/60 text-slate-400">
-          <tr>
-            <th class="p-2">Datum</th>
-            <th class="p-2">Zdroj</th>
-            <th class="p-2">Název tréninku</th>
-            <th class="p-2">Objem / Nastoupáno</th>
-            <th class="p-2">Prům. Tep</th>
-            <th class="p-2">TSS</th>
-            <th class="p-2 text-right"></th>
-          </tr>
-        </thead>
-        <tbody id="activity-list" class="divide-y divide-slate-800">
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Modal Strava -->
-  <div id="strava-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="card p-6 rounded-2xl max-w-md w-full shadow-2xl border-orange-500/40">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center gap-2 text-[#fc4c02] font-black text-lg">
-          <i class="fa-brands fa-strava text-xl"></i> Strava API Connect
+    <!-- Shrnutí do dlaždic -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+      <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-orange-400"><i class="fa-solid fa-bicycle mr-1.5"></i> Kolo (MTB / Gravel)</span>
+          <span class="text-[10px] text-slate-400">16 jízd</span>
         </div>
-        <button onclick="zavritStravaModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+        <div class="text-lg font-black text-slate-100 mt-2">757 km <span class="text-xs font-normal text-slate-400">/ +10 700 m</span></div>
+        <p class="text-[11px] text-slate-400 mt-1 leading-snug">Většina MTB 45–60 km (+650–950 m) s průměrem 22 km/h. Rychlejší gravel cca 25 km/h.</p>
       </div>
-      <p class="text-xs text-slate-300 mt-3 leading-relaxed">
-        Přímá synchronizace tvých jízd ze Stravy včetně nastoupaných metrů a průměrného tepu.
-      </p>
-      <div class="mt-4 space-y-3">
-        <div>
-          <label class="text-[11px] font-bold uppercase text-slate-400">Client ID</label>
-          <input type="text" id="strava-client-id" placeholder="např. 123456" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 mt-1">
+
+      <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-cyan-400"><i class="fa-solid fa-dumbbell mr-1.5"></i> Posilování</span>
+          <span class="text-[10px] text-slate-400">20 tréninků</span>
         </div>
-        <div>
-          <label class="text-[11px] font-bold uppercase text-slate-400">Client Secret</label>
-          <input type="password" id="strava-client-secret" placeholder="••••••••••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 mt-1">
-        </div>
+        <div class="text-lg font-black text-slate-100 mt-2">3–5× týdně <span class="text-xs font-normal text-slate-400">/ Ø 87 min</span></div>
+        <p class="text-[11px] text-slate-400 mt-1 leading-snug">Pravidelný ranní silový režim. Strava zátěž (7–18 RE) podhodnocuje kvůli absenci měřeného tepu.</p>
       </div>
-      <div class="mt-5 flex gap-2">
-        <button onclick="simulovatStravaSync()" class="flex-1 bg-[#fc4c02] hover:bg-[#e34402] text-white py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-rotate"></i> Synchronizovat
-        </button>
-        <button onclick="zavritStravaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-xs font-semibold">
-          Zavřít
-        </button>
+
+      <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-400"><i class="fa-solid fa-person-walking mr-1.5"></i> Chůze & Kompenzace</span>
+          <span class="text-[10px] text-slate-400">Denně</span>
+        </div>
+        <div class="text-lg font-black text-slate-100 mt-2">2–4 km <span class="text-xs font-normal text-slate-400">denně</span></div>
+        <p class="text-[11px] text-slate-400 mt-1 leading-snug">Pravidelná večerní chůze + delší výšlapy do 8 km. Perfektní kompenzace po směně i před spánkem.</p>
       </div>
     </div>
-  </div>
 
-  <script>
-    let aktivity = JSON.parse(localStorage.getItem('user_activities_v3')) || [
-      { id: 1, datum: getRelativeDate(-4), zdroj: "Strava", typ: "Kolo", nazev: "Tempo Vysočina okruh & kopce", km: 54, nastoupano: 640, cas: 115, avgHr: 147, maxHr: 169, tss: 118 },
-      { id: 2, datum: getRelativeDate(-3), zdroj: "Manual", typ: "Síla", nazev: "Silové nohy (leg press, výpady) + core", km: 0, nastoupano: 0, cas: 60, avgHr: 125, maxHr: 146, tss: 65 },
-      { id: 3, datum: getRelativeDate(-2), zdroj: "Manual", typ: "Volno", nazev: "24h Služba / regenerace", km: 0, nastoupano: 0, cas: 0, avgHr: 0, maxHr: 0, tss: 0 },
-      { id: 4, datum: getRelativeDate(-1), zdroj: "Strava", typ: "Kolo", nazev: "Z2 Vytrvalost & technika dechu", km: 48, nastoupano: 420, cas: 105, avgHr: 132, maxHr: 148, tss: 82 }
-    ];
-
-    function getRelativeDate(offset) {
-      const d = new Date();
-      d.setDate(d.getDate() + offset);
-      return d.toISOString().split('T')[0];
-    }
-
-    function ulozAktivity() {
-      localStorage.setItem('user_activities_v3', JSON.stringify(aktivity));
-      prepocitejVse();
-    }
-
-    function prepocitejVse() {
-      aktivity.sort((a, b) => new Date(a.datum) - new Date(b.datum));
-
-      let ctl = 48;
-      let atl = 52;
-
-      const dates = [];
-      const ctlData = [];
-      const atlData = [];
-      const tsbData = [];
-
-      for (let i = 29; i >= 0; i--) {
-        const dStr = getRelativeDate(-i);
-        const dneAct = aktivity.filter(a => a.datum === dStr);
-        const dayTSS = dneAct.reduce((sum, a) => sum + (Number(a.tss) || 0), 0);
-
-        ctl = ctl + (dayTSS - ctl) * (1 - Math.exp(-1 / 42));
-        atl = atl + (dayTSS - atl) * (1 - Math.exp(-1 / 7));
-        const tsb = ctl - atl;
-
-        dates.push(dStr.slice(5));
-        ctlData.push(Math.round(ctl));
-        atlData.push(Math.round(atl));
-        tsbData.push(Math.round(tsb));
-      }
-
-      const curCTL = ctlData[ctlData.length - 1];
-      const curATL = atlData[atlData.length - 1];
-      const curTSB = tsbData[tsbData.length - 1];
-
-      document.getElementById('ctl-val').innerText = curCTL;
-      document.getElementById('atl-val').innerText = curATL;
-      
-      const tsbEl = document.getElementById('tsb-val');
-      const tsbLabel = document.getElementById('tsb-label');
-      tsbEl.innerText = (curTSB > 0 ? "+" : "") + curTSB;
-
-      // 1. STAV TRÉNINKU & NA CO SE ZAMĚŘIT
-      aktualizujStavAFokus(curTSB);
-
-      // 2. ROZBOR POSLEDNÍHO TRÉNINKU
-      aktualizujRozborPoslednihoTréninku();
-
-      // 3. NÁSLEDUJÍCÍ DNY
-      aktualizujNasledujiciDny(curTSB);
-
-      // Týdenní sumy
-      const tydenZpet = new Date();
-      tydenZpet.setDate(tydenZpet.getDate() - 7);
-      const tydenAct = aktivity.filter(a => new Date(a.datum) >= tydenZpet);
-      const tydenKM = tydenAct.reduce((s, a) => s + (Number(a.km) || 0), 0);
-      const tydenElev = tydenAct.reduce((s, a) => s + (Number(a.nastoupano) || 0), 0);
-
-      document.getElementById('weekly-elev').innerHTML = `${tydenElev} <span class="text-xs font-normal text-slate-400">m</span>`;
-      document.getElementById('weekly-km').innerText = `${tydenKM} km na kole`;
-
-      vykresliTabulku();
-      aktualizujGraf(dates, ctlData, atlData, tsbData);
-    }
-
-    function aktualizujStavAFokus(tsb) {
-      const card = document.getElementById('status-card');
-      const badge = document.getElementById('status-badge');
-      const desc = document.getElementById('status-desc');
-      const intensity = document.getElementById('status-intensity');
-      const focus = document.getElementById('focus-points');
-
-      if (tsb < -30) {
-        card.className = "card p-5 rounded-xl shadow-sm border-l-4 border-l-rose-500";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800";
-        badge.innerText = "Akutní přetížení";
-        desc.innerText = "Akutní únava (ATL) je příliš vysoko nad kapacitou (CTL). Svaly i nervová soustava vyžadují kompenzaci, hrozí pokles výkonu.";
-        intensity.innerText = "Velmi nízká (Z1 regenerace / volno)";
-
-        focus.innerHTML = `
-          <li class="flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation text-rose-400 mt-0.5"></i><span><strong>Žádné intervaly:</strong> Stopka pro laktátové kopce a těžké série nohou.</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-bed text-rose-400 mt-0.5"></i><span><strong>Spánek & hydratace:</strong> Zaměř se na hluboký spánek a doplnění minerálů (hořčík, elektrolyty).</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-rotate text-rose-400 mt-0.5"></i><span><strong>Vyjetí nohou:</strong> Max 30 min lehce v Z1 s kadencí 95 rpm pro odplavení metabolitů.</span></li>
-        `;
-      } else if (tsb >= -30 && tsb <= -10) {
-        card.className = "card p-5 rounded-xl shadow-sm border-l-4 border-l-emerald-500";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800";
-        badge.innerText = "Produktivní budování";
-        desc.innerText = "Optimální tréninkový impuls. Tělo je v režimu efektivní adaptace, kondice (CTL) dlouhodobě roste.";
-        intensity.innerText = "Střední až vysoká (Z3 tempo / SweetSpot)";
-
-        focus.innerHTML = `
-          <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span><strong>Kopce v SweetSpotu (Z3):</strong> Dlouhá táhlá stoupání na 145–155 bpm se souvislým tahem.</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span><strong>Hladká kadence:</strong> Držet 85–90 rpm, zbytečně neklesat pod 75 ani v prudkých sklonech.</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span><strong>Kontrola dechu:</strong> Dech nosem na mezi kopci, v kopci hluboký kontrolovaný výdech ústy.</span></li>
-        `;
-      } else if (tsb > -10 && tsb <= 10) {
-        card.className = "card p-5 rounded-xl shadow-sm border-l-4 border-l-cyan-500";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800";
-        badge.innerText = "Vyrovnaný stav";
-        desc.innerText = "Únava odezněla, kapacita je plně k dispozici. Tělo snese jakýkoliv středně těžký až objemový trénink.";
-        intensity.innerText = "Střední (Z2 základní vytrvalost)";
-
-        focus.innerHTML = `
-          <li class="flex items-start gap-2"><i class="fa-solid fa-compass text-cyan-400 mt-0.5"></i><span><strong>Z2 Aerobní základ:</strong> Souvislá jízda 2–2.5 hodiny v pásmu 125–140 bpm.</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-dumbbell text-cyan-400 mt-0.5"></i><span><strong>Silový trénink:</strong> Ideální den pro posilovnu – těžké nohy, hluboké výpady a core.</span></li>
-        `;
-      } else {
-        card.className = "card p-5 rounded-xl shadow-sm border-l-4 border-l-amber-500";
-        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800";
-        badge.innerText = "Superkompenzace / Čerstvost";
-        desc.innerText = "Únava je kompletně vymazána. Svaly jsou stoprocentně odpočaté a připravené na maximální výkon.";
-        intensity.innerText = "Maximální (Z4/Z5 anaerobní výjezdy / PR na segmentech)";
-
-        focus.innerHTML = `
-          <li class="flex items-start gap-2"><i class="fa-solid fa-bolt text-amber-400 mt-0.5"></i><span><strong>Útok na osobáky:</strong> Ostré kopce, stojky ze sedla a maximální watty.</span></li>
-          <li class="flex items-start gap-2"><i class="fa-solid fa-stopwatch text-amber-400 mt-0.5"></i><span><strong>Testovací segmenty:</strong> Vyzkoušej 10–15min souvislý kopec na hraně laktátu (165–172 bpm).</span></li>
-        `;
-      }
-    }
-
-    function aktualizujRozborPoslednihoTréninku() {
-      const last = aktivity[aktivity.length - 1];
-      if (!last) return;
-
-      document.getElementById('last-workout-date').innerText = last.datum;
-      document.getElementById('last-workout-name').innerText = last.nazev;
-      document.getElementById('last-workout-volume').innerText = last.km > 0 ? `${last.km} km (+${last.nastoupano || 0} m)` : `${last.cas} min`;
-      document.getElementById('last-workout-hr').innerText = last.avgHr > 0 ? `Ø ${last.avgHr} bpm (max ${last.maxHr || '-'})` : 'Bez senzoru';
-      document.getElementById('last-workout-tss').innerText = `${last.tss} TSS`;
-
-      let rozbor = "";
-      if (last.typ === "Kolo") {
-        const efektivita = Math.round((last.tss / (last.cas || 1)) * 60);
-        rozbor = `<strong>Hodnocení jízdy na kole:</strong> Vyjížďka přinesla <strong>${last.tss} TSS</strong> za ${last.cas} minut. Průměrná tepová zátěž ${last.avgHr} bpm odpovídá pásmu <strong>${last.avgHr > 145 ? 'Z3 (Tempo)' : 'Z2 (Vytrvalost)'}</strong>. Nastoupaných ${last.nastoupano || 0} m výborně stimulovalo silovou vytrvalost nohou. Energetický výdej byl vysoký, doporučuji doplnit sacharidy a kvalitní bílkoviny pro svalovou obnovu.`;
-      } else if (last.typ === "Síla") {
-        rozbor = `<strong>Hodnocení silového tréninku:</strong> Trénink zaměřený na dolní končetiny a trup vygeneroval <strong>${last.tss} TSS</strong>. Neuromuskulární zátěž je vysoká – nohy budou mít tendenci tuhnout. Pro cyklistiku doporučuji zítra vynechat silové výjezdy do prudkých kopců a soustředit se na lehký převod a kadenci.`;
-      } else {
-        rozbor = `<strong>Hodnocení dne volna:</strong> Regenerační den po službě úspěšně srazil akutní únavu (ATL). Tělo využilo klidový režim k obnově glykogenu. Zítra je organismus připraven na plnohodnotný tréninkový impuls.`;
-      }
-
-      document.getElementById('last-workout-analysis').innerHTML = rozbor;
-    }
-
-    function aktualizujNasledujiciDny(tsb) {
-      const container = document.getElementById('forecast-cards');
-      container.innerHTML = '';
-
-      let dny = [];
-      if (tsb < -25) {
-        dny = [
-          { den: "Zítra", typ: "Aktivní regenerace", detail: "30-40 min Z1 lehká rovina (kadence 95 rpm)", tss: "25 TSS", color: "border-cyan-500/50" },
-          { den: "Pozítří", typ: "Základní vytrvalost (Z2)", detail: "45-50 km rovinatější profil, dech nosem", tss: "65 TSS", color: "border-emerald-500/50" },
-          { den: "Za 3 dny", typ: "Kopce / Posilovna", detail: "Podle pocitu nohou návrat k tempu (Z3) nebo síle", tss: "90 TSS", color: "border-amber-500/50" }
-        ];
-      } else if (tsb >= -25 && tsb <= -5) {
-        dny = [
-          { den: "Zítra", typ: "Klíčový trénink: Kopce (Z3)", detail: "50-60 km kopcovitý okruh, souvislé táhlé výjezdy", tss: "110 TSS", color: "border-orange-500/50" },
-          { den: "Pozítří", typ: "Lehké vyjetí / Volno", detail: "Kompenzace po kopcích, max 35 min Z1 nebo procházka", tss: "20 TSS", color: "border-cyan-500/50" },
-          { den: "Za 3 dny", typ: "Silový trénink v posilovně", detail: "Nohy (leg press, výpady) + stabilizace jádra", tss: "65 TSS", color: "border-indigo-500/50" }
-        ];
-      } else {
-        dny = [
-          { den: "Zítra", typ: "Test / Intenzivní tempo", detail: "Ostré intervaly v kopcích Z4 nebo rychlé tempo", tss: "120 TSS", color: "border-rose-500/50" },
-          { den: "Pozítří", typ: "Vytrvalostní objem (Z2)", detail: "55-65 km plynulé tempo, kontrola dechu", tss: "85 TSS", color: "border-emerald-500/50" },
-          { den: "Za 3 dny", typ: "Aktivní regenerace", detail: "Lehké vyjetí nohou na vysokou kadenci", tss: "30 TSS", color: "border-cyan-500/50" }
-        ];
-      }
-
-      dny.forEach(d => {
-        const div = document.createElement('div');
-        div.className = `p-3.5 rounded-xl bg-slate-900/60 border ${d.color} flex flex-col justify-between`;
-        div.innerHTML = `
-          <div>
-            <div class="flex justify-between items-center">
-              <span class="text-[11px] font-bold text-slate-400 uppercase">${d.den}</span>
-              <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/60">${d.tss}</span>
-            </div>
-            <div class="font-bold text-xs text-slate-200 mt-1.5">${d.typ}</div>
-            <div class="text-[11px] text-slate-400 mt-1 leading-snug">${d.detail}</div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function vykresliTabulku() {
-      const tb = document.getElementById('activity-list');
-      tb.innerHTML = '';
-      const zobrazit = [...aktivity].reverse().slice(0, 10);
-      document.getElementById('activity-count').innerText = `${aktivity.length} celkem`;
-
-      zobrazit.forEach(a => {
-        const tr = document.createElement('tr');
-        tr.className = "border-b border-slate-800/60 hover:bg-slate-800/40";
-        tr.innerHTML = `
-          <td class="p-2 font-mono text-[11px] text-slate-400">${a.datum.slice(5)}</td>
-          <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${a.zdroj === 'Strava' ? 'bg-orange-950 text-orange-400 border border-orange-800' : 'bg-slate-800 text-slate-400'}">${a.zdroj || 'Ruční'}</span></td>
-          <td class="p-2 font-medium text-slate-200 text-xs">${a.nazev}</td>
-          <td class="p-2 text-xs text-slate-300">${a.km > 0 ? a.km + ' km' : '-'} ${a.nastoupano > 0 ? ' / +' + a.nastoupano + ' m' : ''}</td>
-          <td class="p-2 font-mono text-xs text-slate-300">${a.avgHr > 0 ? a.avgHr + ' bpm' : '-'}</td>
-          <td class="p-2 font-mono font-bold text-amber-400 text-xs">${a.tss}</td>
-          <td class="p-2 text-right"><button onclick="smazatAktivitu(${a.id})" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
-        `;
-        tb.appendChild(tr);
-      });
-    }
-
-    let chartInstance = null;
-    function aktualizujGraf(labels, ctl, atl, tsb) {
-      const ctx = document.getElementById('loadChart').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Kondice (CTL)', data: ctl, borderColor: '#22d3ee', borderWidth: 2.2, tension: 0.3, pointRadius: 0 },
-            { label: 'Únava (ATL)', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 0 },
-            { label: 'Forma (TSB)', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 0 }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: '#172033' }, ticks: { color: '#64748b', font: { size: 9 } } },
-            y: { grid: { color: '#172033' }, ticks: { color: '#64748b', font: { size: 9 } } }
-          }
-        }
-      });
-    }
-
-    function otevritStravaModal() {
-      document.getElementById('strava-modal').classList.remove('hidden');
-    }
-
-    function zavritStravaModal() {
-      document.getElementById('strava-modal').classList.add('hidden');
-    }
-
-    function simulovatStravaSync() {
-      const dnesni = {
-        id: Date.now(),
-        datum: new Date().toISOString().split('T')[0],
-        zdroj: "Strava",
-        typ: "Kolo",
-        nazev: "Nová Strava jízda (kopce & tempo)",
-        km: 52,
-        nastoupano: 560,
-        cas: 115,
-        avgHr: 144,
-        maxHr: 168,
-        tss: 105
-      };
-      aktivity.push(dnesni);
-      ulozAktivity();
-      zavritStravaModal();
-      alert("✅ Úspěšně synchronizována nová jízda ze Stravy se stoupáním!");
-    }
-
-    function pridatAktivituModal() {
-      const typ = prompt("Typ (Kolo / Sí
+    <!-- Týdenní rozpad km a Relative Effort -->
+    <div class="mt-4 p-4 rounded-xl bg-slate-900/40 border border-slate-800">
+      <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Vývoj kilometráže & Relative Effort po týdnech:</div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+        <div class="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+          <div class="text-[10px] text-slate-400">21.–27. 9.</div>
+          <div class="font-black text-slate-200 mt-1 text-sm">58 km</div>
+          <div class="text-[10px] text-slate-400">Rozjezd bloku</div>
+        </div>
+        <div class="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+          <div class="text-[10px] text-slate-400">28. 9.–4. 10.</div>
+          <div class="font-black text-emerald-400 mt-1 text-sm">164 km</div>
+          <div class="text-[10px] text-rose-400 font-semibold">Max RE 237</div>
+        </div>
+        <div class="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+          <div class="text-[10px] text-slate-400">5.–11. 10.</div>
+          <div class="font-black text-emerald-400 mt-1 text-sm">178 km</div>
+          <div class="text-[10px] text-rose-400 font-semibold">Max RE 225</div>
+        </div>
+        <div class="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+          <div class="text-[10px] text-slate-400">12.–18. 10.</div>
+          <div class="font-black text-emerald-400 mt-1 text-sm">203 km</div>
+          <div class="text-[10px] text-rose-400 font-semibold">Max RE 224</div>
+        </div>
+        <div class="p-2 rounded-lg bg-amber-950/20 border border-amber-800/40
