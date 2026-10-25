@@ -31,9 +31,9 @@
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <span>Gemini Coach</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v4.0 Fix</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v4.1 Gym Split</span>
         </h1>
-        <p class="text-slate-400 text-xs">Spolehlivý export pro iOS, grafy & Strava Sync</p>
+        <p class="text-slate-400 text-xs">Strukturovaný zápis partií & chytrý export</p>
       </div>
     </div>
 
@@ -157,7 +157,7 @@
             📝 Zapsat cviky
           </button>
           <button onclick="exportProGemini('posilovani')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 py-2 rounded-lg border border-slate-700 transition text-xs font-semibold">
-            🏋️ Rozebrat
+            🏋️ Zhodnotit trénink
           </button>
         </div>
       </div>
@@ -231,7 +231,7 @@
     </div>
   </section>
 
-  <!-- NOTIFIKAČNÍ TOAST PRO ÚSPĚŠNÉ KOPÍROVÁNÍ -->
+  <!-- NOTIFIKAČNÍ TOAST -->
   <div id="toast-notif" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-5 py-3 rounded-xl shadow-2xl z-50 text-sm font-bold text-white transition-opacity duration-300 hidden opacity-0 pointer-events-none text-center min-w-[250px]">
   </div>
 
@@ -264,18 +264,35 @@
     </div>
   </div>
 
-  <!-- iOS-SAFE MODAL: Cviky -->
+  <!-- iOS-SAFE MODAL: Strukturovaný zápis cviků -->
   <div id="cviky-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="card p-5 md:p-6 rounded-2xl max-w-md w-full shadow-2xl border-indigo-500/40">
       <h3 class="font-bold text-lg text-slate-200 mb-2 flex items-center gap-2">
         <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Zapsat detaily tréninku
       </h3>
-      <p class="text-xs text-slate-400 mb-4">Zapiš partii, cviky, váhy a série. Uloží se k tvému nejnovějšímu silovému tréninku.</p>
+      <p class="text-[11px] text-slate-400 mb-4">Uložená data budou připravena k odeslání pro AI trenéra (Gemini) k hloubkové analýze tvého výkonu.</p>
       
-      <textarea id="cviky-text" rows="5" placeholder="Např: Dnes nohy a střed těla.&#10;Dřepy 4x10 (80kg)&#10;Výpady 3x12 (20kg)&#10;Plank 3x 1 min..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500"></textarea>
+      <div class="space-y-4">
+        <div>
+          <label class="text-[10px] font-bold uppercase text-slate-400">Hlavní partie (Split)</label>
+          <select id="cviky-partie" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 mt-1">
+            <option value="Záda + Biceps">Záda + Biceps</option>
+            <option value="Prsa + Triceps">Prsa + Triceps</option>
+            <option value="Nohy">Nohy</option>
+            <option value="Ramena + Ruce">Ramena + Ruce</option>
+            <option value="Core / Břicho">Core / Břicho</option>
+            <option value="Fullbody">Fullbody</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="text-[10px] font-bold uppercase text-slate-400">Odcvičené cviky, série a váhy</label>
+          <textarea id="cviky-text" rows="4" placeholder="Příklad:&#10;Dřepy 4x10 (80kg)&#10;Výpady 3x12 (20kg)&#10;Leg press 3x10 (120kg)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500 mt-1"></textarea>
+        </div>
+      </div>
       
       <div class="mt-5 flex gap-2">
-        <button onclick="ulozitCviky()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs font-bold transition">Uložit k tréninku</button>
+        <button onclick="ulozitCviky()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs font-bold transition">Uložit strukturu</button>
         <button onclick="zavritCvikyModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-xs font-semibold">Zrušit</button>
       </div>
     </div>
@@ -306,7 +323,7 @@
   <script>
     let aktivity = JSON.parse(localStorage.getItem('strava_live_activities')) || [
       { id: 1, datum: getRelativeDate(-4), zdroj: "Strava", typ: "Kolo", nazev: "MTB Vysočina", km: 45, nastoupano: 780, cas: 110, avgHr: 156, tss: 135 },
-      { id: 2, datum: getRelativeDate(-2), zdroj: "Manual", typ: "Síla", nazev: "Silový trénink", km: 0, nastoupano: 0, cas: 85, avgHr: 126, tss: 70, cviky: "Leg press 4x12 (120kg), Výpady..." },
+      { id: 2, datum: getRelativeDate(-2), zdroj: "Manual", typ: "Síla", nazev: "Silový trénink", km: 0, nastoupano: 0, cas: 85, avgHr: 126, tss: 70, cviky: "Nohy || Leg press 4x12 (120kg)\nVýpady 3x10 (20kg)" },
       { id: 3, datum: getRelativeDate(-1), zdroj: "Strava", typ: "Kolo", nazev: "Z2 vytrvalost", km: 54, nastoupano: 520, cas: 135, avgHr: 138, tss: 84 },
       { id: 4, datum: getRelativeDate(0), zdroj: "Manual", typ: "Chůze", nazev: "Večerní chůze", km: 4, nastoupano: 45, cas: 50, avgHr: 95, tss: 18 }
     ];
@@ -422,8 +439,8 @@
       document.getElementById('ctl-val').innerText = ctlData[29]; document.getElementById('atl-val').innerText = atlData[29];
       document.getElementById('tsb-val').innerText = (tsbData[29] > 0 ? "+" : "") + tsbData[29];
       
-      const tydenTSS = aktivity.filter(a => new Date(a.datum) >= new Date(new Date().setDate(new Date().getDate() - 7))).reduce((s, a) => s + (Number(a.nastoupano) || 0), 0);
-      document.getElementById('weekly-elev').innerHTML = `${tydenTSS} <span class="text-xs font-normal text-slate-400">m</span>`;
+      const tydenElev = aktivity.filter(a => new Date(a.datum) >= new Date(new Date().setDate(new Date().getDate() - 7))).reduce((s, a) => s + (Number(a.nastoupano) || 0), 0);
+      document.getElementById('weekly-elev').innerHTML = `${tydenElev} <span class="text-xs font-normal text-slate-400">m</span>`;
       
       aktualizujRozdelenyRozbor();
       vykresliTabulku(); aktualizujGraf(dates, ctlData, atlData, tsbData);
@@ -445,7 +462,17 @@
         document.getElementById('sila-date').innerText = sila.datum; document.getElementById('sila-name').innerText = sila.nazev;
         document.getElementById('sila-vol').innerHTML = `${sila.cas} min<br>-`;
         document.getElementById('sila-hr').innerHTML = `Ø ${sila.avgHr > 0 ? sila.avgHr + ' bpm' : '-'}<br>~${sila.tss} TSS`;
-        let cvikyNapis = sila.cviky ? `<br><br><span class="text-indigo-300 font-semibold">Zapsané cviky:</span> <span class="text-slate-400 italic">${sila.cviky.substring(0,40)}...</span>` : '';
+        
+        let cvikyNapis = '';
+        if(sila.cviky) {
+          let rozdeleno = sila.cviky.split("||");
+          if(rozdeleno.length > 1) {
+            cvikyNapis = `<br><br><span class="text-indigo-400 font-bold">Zapsaná partie: ${rozdeleno[0].trim()}</span><br><span class="text-slate-400 italic">${rozdeleno[1].trim().replace(/\n/g, ', ')}</span>`;
+          } else {
+            cvikyNapis = `<br><br><span class="text-indigo-400 font-bold">Zapsané cviky:</span> <span class="text-slate-400 italic">${sila.cviky}</span>`;
+          }
+        }
+        
         document.getElementById('sila-analysis').innerHTML = `<strong>${sila.tss} TSS</strong> odráží neuromuskulární stres svalů.${cvikyNapis}`;
       }
 
@@ -495,6 +522,7 @@
         tss: Number(document.getElementById('new-tss').value) || 50
       });
       ulozAktivity(); zavritAktivitaModal();
+      ukazToast('<i class="fa-solid fa-check mr-2"></i>Aktivita přidána!');
     }
 
     function smazatAktivitu(id) { aktivity = aktivity.filter(a => a.id !== id); ulozAktivity(); }
@@ -504,7 +532,16 @@
       if (silaIndex === -1) { alert("Nemáš uložený žádný silový trénink."); return; }
       
       const skutecnyIndex = aktivity.length - 1 - silaIndex;
-      document.getElementById('cviky-text').value = aktivity[skutecnyIndex].cviky || "";
+      const ulozeneCviky = aktivity[skutecnyIndex].cviky || "";
+      
+      if(ulozeneCviky.includes("||")) {
+        const parts = ulozeneCviky.split("||");
+        document.getElementById('cviky-partie').value = parts[0].trim();
+        document.getElementById('cviky-text').value = parts[1].trim();
+      } else {
+        document.getElementById('cviky-text').value = ulozeneCviky;
+      }
+      
       document.getElementById('cviky-modal').classList.remove('hidden');
     }
     
@@ -514,13 +551,14 @@
       const silaIndex = [...aktivity].reverse().findIndex(a => a.typ === 'Síla');
       if (silaIndex !== -1) {
         const skutecnyIndex = aktivity.length - 1 - silaIndex;
-        aktivity[skutecnyIndex].cviky = document.getElementById('cviky-text').value;
+        const partie = document.getElementById('cviky-partie').value;
+        const text = document.getElementById('cviky-text').value;
+        aktivity[skutecnyIndex].cviky = `${partie} || ${text}`;
         ulozAktivity(); zavritCvikyModal();
-        ukazToast('<i class="fa-solid fa-check mr-2"></i>Cviky uloženy!');
+        ukazToast('<i class="fa-solid fa-check mr-2"></i>Struktura cviků uložena!');
       }
     }
 
-    // Nová, mnohem robustnější funkce pro export dat do schránky s fallbackem
     async function exportProGemini(tema) {
       const poleReverse = [...aktivity].reverse();
       let zajmovaAktivita = poleReverse[0]; 
@@ -529,13 +567,31 @@
       if (tema === 'posilovani') zajmovaAktivita = poleReverse.find(a => a.typ === 'Síla') || zajmovaAktivita;
       if (tema === 'kompenzace') zajmovaAktivita = poleReverse.find(a => a.typ === 'Chůze' || a.typ === 'Volno') || zajmovaAktivita;
 
-      const text = `Ahoj, aktuální CTL: ${document.getElementById('ctl-val').innerText}, ATL: ${document.getElementById('atl-val').innerText}, TSB: ${document.getElementById('tsb-val').innerText}.\n\nKonkrétní trénink pro analýzu:\n${JSON.stringify(zajmovaAktivita, null, 2)}\n\nTéma dotazu: ${tema}. Pojďme na to.`;
+      // Zpracování cviků do hezkého formátu pro AI
+      let detailCvikůText = "";
+      if (zajmovaAktivita.cviky) {
+         if (zajmovaAktivita.cviky.includes("||")) {
+             const parts = zajmovaAktivita.cviky.split("||");
+             detailCvikůText = `\nPartie (Split): ${parts[0].trim()}\nOdcvičeno:\n${parts[1].trim()}`;
+         } else {
+             detailCvikůText = `\nOdcvičeno:\n${zajmovaAktivita.cviky}`;
+         }
+      }
+
+      const text = `Ahoj trenére, 
+Aktuální CTL: ${document.getElementById('ctl-val').innerText}, ATL: ${document.getElementById('atl-val').innerText}, TSB: ${document.getElementById('tsb-val').innerText}.
+
+Téma dotazu: Chci provést expertní ${tema}.
+Zde jsou data k poslednímu tréninku daného typu:
+Typ: ${zajmovaAktivita.typ}
+Název: ${zajmovaAktivita.nazev}
+Čas: ${zajmovaAktivita.cas} min
+Prům. tep: ${zajmovaAktivita.avgHr > 0 ? zajmovaAktivita.avgHr + ' bpm' : 'Bez měření'}${detailCvikůText}`;
       
       try {
         await navigator.clipboard.writeText(text);
-        ukazToast('<i class="fa-solid fa-check mr-2"></i>Zkopírováno! Vlož do chatu s Gemini.');
+        ukazToast('<i class="fa-solid fa-check mr-2"></i>Zkopírováno! Vlož do chatu s trenérem.');
       } catch (err) {
-        // Fallback pro iOS bezpečnostní restrikce PWA (hidden textarea metoda)
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "fixed";
@@ -547,7 +603,7 @@
           document.execCommand('copy');
           ukazToast('<i class="fa-solid fa-check mr-2"></i>Zkopírováno (přes zálohu)!');
         } catch (e) {
-          ukazToast('<i class="fa-solid fa-xmark mr-2"></i>Chyba kopírování. Apple to blokuje.', true);
+          ukazToast('<i class="fa-solid fa-xmark mr-2"></i>Chyba kopírování.', true);
         }
         textArea.remove();
       }
