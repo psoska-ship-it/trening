@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tréninkový Dashboard</title>
+
+  <!-- iOS PWA nastavení -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Trénink">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2972/2972185.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .card { background: #1e293b; border: 1px solid #334155; }
+  </style>
+</head>
+<body class="p-4 md:p-8 max-w-6xl mx-auto pb-12">
+
+  <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-700 gap-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold flex items-center gap-3 text-orange-500">
+        <i class="fa-solid fa-person-biking"></i> Training Load
+      </h1>
+      <p class="text-slate-400 text-xs md:text-sm mt-1">Zátěž (CTL / ATL / TSB) s AI koučem</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="exportProGemini()" class="flex-1 md:flex-none bg-indigo-600 active:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow">
+        <i class="fa-solid fa-robot"></i> Data pro AI
+      </button>
+      <button onclick="pridatAktivituModal()" class="flex-1 md:flex-none bg-orange-600 active:bg-orange-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow">
+        <i class="fa-solid fa-plus"></i> Nová aktivita
+      </button>
+    </div>
+  </header>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+    <div class="card p-4 rounded-xl shadow-sm">
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Kondice (CTL)</div>
+      <div class="text-2xl md:text-3xl font-black mt-1 text-cyan-400" id="ctl-val">0</div>
+      <div class="text-[11px] text-slate-400 mt-1">Objem (42 dní)</div>
+    </div>
+    <div class="card p-4 rounded-xl shadow-sm">
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Únava (ATL)</div>
+      <div class="text-2xl md:text-3xl font-black mt-1 text-rose-400" id="atl-val">0</div>
+      <div class="text-[11px] text-slate-400 mt-1">Akutní (7 dní)</div>
+    </div>
+    <div class="card p-4 rounded-xl shadow-sm">
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Forma (TSB)</div>
+      <div class="text-2xl md:text-3xl font-black mt-1 font-mono" id="tsb-val">0</div>
+      <div class="text-[11px] font-semibold mt-1 truncate" id="tsb-label">Počítám...</div>
+    </div>
+    <div class="card p-4 rounded-xl shadow-sm">
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Tento týden</div>
+      <div class="text-2xl md:text-3xl font-black mt-1 text-amber-400" id="weekly-tss">0</div>
+      <div class="text-[11px] text-slate-400 mt-1" id="weekly-km">0 km</div>
+    </div>
+  </section>
+
+  <section class="card p-4 md:p-6 rounded-xl mt-6 shadow-sm">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-base md:text-lg font-bold text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-chart-line text-slate-400"></i> Vývoj formy (30 dní)
+      </h2>
+    </div>
+    <div class="relative h-56 md:h-64 w-full">
+      <canvas id="loadChart"></canvas>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <section class="card p-5 rounded-xl lg:col-span-1 border-indigo-500/40 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+          <h3 class="font-bold text-indigo-400 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-brain"></i> AI Doporučení na dnešek
+          </h3>
+          <span class="text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-700 px-2 py-0.5 rounded font-mono">Banister</span>
+        </div>
+        <div class="mt-4 text-xs md:text-sm" id="ai-recommendation-box">
+          <p class="text-slate-300 leading-relaxed" id="ai-text">
+            Vyhodnocuji stav tréninku...
+          </p>
+        </div>
+      </div>
+      <div class="mt-6 pt-4 border-t border-slate-700">
+        <button onclick="exportProGemini()" class="w-full bg-slate-800 active:bg-slate-700 border border-slate-600 text-slate-200 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-2">
+          <i class="fa-regular fa-copy"></i> Kopírovat podrobná data pro chat
+        </button>
+      </div>
+    </section>
+
+    <section class="card p-5 rounded-xl lg:col-span-2 shadow-sm">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-slate-400"></i> Poslední tréninky
+        </h3>
+        <span class="text-xs text-slate-400 font-mono" id="activity-count">0 záznamů</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs md:text-sm text-slate-300">
+          <thead class="text-[11px] uppercase bg-slate-800/80 text-slate-400">
+            <tr>
+              <th class="p-2">Datum</th>
+              <th class="p-2">Typ</th>
+              <th class="p-2">Název</th>
+              <th class="p-2">Doba</th>
+              <th class="p-2">TSS</th>
+              <th class="p-2 text-right"></th>
+            </tr>
+          </thead>
+          <tbody id="activity-list" class="divide-y divide-slate-800">
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let aktivity = JSON.parse(localStorage.getItem('user_activities')) || [
+      { id: 1, datum: getRelativeDate(-4), typ: "Kolo", nazev: "Tempo okruh", km: 54, cas: 110, tss: 115 },
+      { id: 2, datum: getRelativeDate(-3), typ: "Síla", nazev: "Nohy + core", km: 0, cas: 60, tss: 65 },
+      { id: 3, datum: getRelativeDate(-2), typ: "Volno", nazev: "Služba", km: 0, cas: 0, tss: 0 },
+      { id: 4, datum: getRelativeDate(-1), typ: "Kolo", nazev: "Z2 vytrvalost", km: 48, cas: 105, tss: 82 }
+    ];
+
+    function getRelativeDate(offset) {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return d.toISOString().split('T')[0];
+    }
+
+    function ulozAktivity() {
+      localStorage.setItem('user_activities', JSON.stringify(aktivity));
+      prepocitejVse();
+    }
+
+    function prepocitejVse() {
+      aktivity.sort((a, b) => new Date(a.datum) - new Date(b.datum));
+
+      let ctl = 45;
+      let atl = 50;
+
+      const dates = [];
+      const ctlData = [];
+      const atlData = [];
+      const tsbData = [];
+
+      for (let i = 29; i >= 0; i--) {
+        const dStr = getRelativeDate(-i);
+        const dneAct = aktivity.filter(a => a.datum === dStr);
+        const dayTSS = dneAct.reduce((sum, a) => sum + (Number(a.tss) || 0), 0);
+
+        ctl = ctl + (dayTSS - ctl) * (1 - Math.exp(-1 / 42));
+        atl = atl + (dayTSS - atl) * (1 - Math.exp(-1 / 7));
+        const tsb = ctl - atl;
+
+        dates.push(dStr.slice(5));
+        ctlData.push(Math.round(ctl));
+        atlData.push(Math.round(atl));
+        tsbData.push(Math.round(tsb));
+      }
+
+      const curCTL = ctlData[ctlData.length - 1];
+      const curATL = atlData[atlData.length - 1];
+      const curTSB = tsbData[tsbData.length - 1];
+
+      document.getElementById('ctl-val').innerText = curCTL;
+      document.getElementById('atl-val').innerText = curATL;
+      
+      const tsbEl = document.getElementById('tsb-val');
+      const tsbLabel = document.getElementById('tsb-label');
+      tsbEl.innerText = (curTSB > 0 ? "+" : "") + curTSB;
+
+      let aiText = "";
+      if (curTSB < -30) {
+        tsbEl.className = "text-2xl md:text-3xl font-black mt-1 font-mono text-rose-500";
+        tsbLabel.innerText = "Přetížení / Únava";
+        tsbLabel.className = "text-[11px] font-semibold mt-1 text-rose-400 truncate";
+        aiText = "🔴 <strong>Riziko přetížení:</strong> Akutní zátěž je vysoká. Dnes zařaď úplné volno nebo max 30 minut regenerace v Z1. Doplň bílkoviny a zaměř se na spánek.";
+      } else if (curTSB >= -30 && curTSB <= -10) {
+        tsbEl.className = "text-2xl md:text-3xl font-black mt-1 font-mono text-emerald-400";
+        tsbLabel.innerText = "Produktivní fáze";
+        tsbLabel.className = "text-[11px] font-semibold mt-1 text-emerald-400 truncate";
+        aiText = "🟢 <strong>Skvělá adaptace:</strong> Kondice roste. Ideální den na hlavní cyklistickou jednotku (tempo/kopce) nebo těžké nohy v posilovně.";
+      } else if (curTSB > -10 && curTSB <= 10) {
+        tsbEl.className = "text-2xl md:text-3xl font-black mt-1 font-mono text-cyan-400";
+        tsbLabel.innerText = "Vyrovnaný stav";
+        tsbLabel.className = "text-[11px] font-semibold mt-1 text-cyan-400 truncate";
+        aiText = "🔵 <strong>Vyrovnaný stav:</strong> Únava odezněla, tělo je připravené na libovolný trénink.";
+      } else {
+        tsbEl.className = "text-2xl md:text-3xl font-black mt-1 font-mono text-amber-400";
+        tsbLabel.innerText = "Superkompenzace";
+        tsbLabel.className = "text-[11px] font-semibold mt-1 text-amber-400 truncate";
+        aiText = "⭐ <strong>Maximální čerstvost:</strong> Únava je pryč. Perfektní čas na testování wattů nebo těžký segment.";
+      }
+
+      document.getElementById('ai-text').innerHTML = aiText;
+
+      const tydenZpet = new Date();
+      tydenZpet.setDate(tydenZpet.getDate() - 7);
+      const tydenAct = aktivity.filter(a => new Date(a.datum) >= tydenZpet);
+      const tydenTSS = tydenAct.reduce((s, a) => s + (Number(a.tss) || 0), 0);
+      const tydenKM = tydenAct.reduce((s, a) => s + (Number(a.km) || 0), 0);
+
+      document.getElementById('weekly-tss').innerHTML = `${tydenTSS} <span class="text-xs font-normal text-slate-400">TSS</span>`;
+      document.getElementById('weekly-km').innerText = `${tydenKM} km`;
+
+      vykresliTabulku();
+      aktualizujGraf(dates, ctlData, atlData, tsbData);
+    }
+
+    function vykresliTabulku() {
+      const tb = document.getElementById('activity-list');
+      tb.innerHTML = '';
+      const zobrazit = [...aktivity].reverse().slice(0, 8);
+      document.getElementById('activity-count').innerText = `${aktivity.length} celkem`;
+
+      zobrazit.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-800 hover:bg-slate-800/40";
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-[11px] text-slate-400">${a.datum.slice(5)}</td>
+          <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${a.typ === 'Kolo' ? 'bg-orange-950 text-orange-300 border border-orange-700' : a.typ === 'Síla' ? 'bg-indigo-950 text-indigo-300 border border-indigo-700' : 'bg-slate-800 text-slate-400'}">${a.typ}</span></td>
+          <td class="p-2 font-medium text-slate-200 text-xs">${a.nazev}</td>
+          <td class="p-2 text-xs text-slate-300">${a.cas > 0 ? a.cas + 'm' : '-'} ${a.km > 0 ? '(' + a.km + 'k)' : ''}</td>
+          <td class="p-2 font-mono font-bold text-amber-400 text-xs">${a.tss}</td>
+          <td class="p-2 text-right"><button onclick="smazatAktivitu(${a.id})" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash text-xs"></i></button></td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    let chartInstance = null;
+    function aktualizujGraf(labels, ctl, atl, tsb) {
+      const ctx = document.getElementById('loadChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Kondice (CTL)', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 0 },
+            { label: 'Únava (ATL)', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 0 },
+            { label: 'Forma (TSB)', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 9 } } },
+            y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 9 } } }
+          }
+        }
+      });
+    }
+
+    function pridatAktivituModal() {
+      const typ = prompt("Typ (Kolo / Síla / Volno):", "Kolo");
+      if (!typ) return;
+      const nazev = prompt("Název:", typ === "Kolo" ? "Tréninková jízda" : "Posilovna");
+      const km = Number(prompt("Vzdálenost (km):", typ === "Kolo" ? "50" : "0")) || 0;
+      const cas = Number(prompt("Doba (min):", "90")) || 0;
+      const tss = Number(prompt("TSS odhad (50-120):", "80")) || 50;
+
+      aktivity.push({
+        id: Date.now(),
+        datum: new Date().toISOString().split('T')[0],
+        typ: typ,
+        nazev: nazev || typ,
+        km: km,
+        cas: cas,
+        tss: tss
+      });
+      ulozAktivity();
+    }
+
+    function smazatAktivitu(id) {
+      aktivity = aktivity.filter(a => a.id !== id);
+      ulozAktivity();
+    }
+
+    function exportProGemini() {
+      const ctl = document.getElementById('ctl-val').innerText;
+      const atl = document.getElementById('atl-val').innerText;
+      const tsb = document.getElementById('tsb-val').innerText;
+      const dataString = `Ahoj Gemini, tady jsou moje aktuální tréninková data z dashboardu:
+- Dlouhodobá kondice (CTL): ${ctl}
+- Akutní únava (ATL): ${atl}
+- Aktuální forma (TSB): ${tsb}
+Poslední aktivity:
+${JSON.stringify(aktivity.slice(-5), null, 2)}
+
+Jak hodnotíš můj stav a co přesně doporučuješ zítra za trénink?`;
+
+      navigator.clipboard.writeText(dataString).then(() => {
+        alert("Data zkopírována do schránky! Teď je stačí vložit sem do chatu.");
+      });
+    }
+
+    prepocitejVse();
+  </script>
+</body>
+</html>
