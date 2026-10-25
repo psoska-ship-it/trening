@@ -32,28 +32,28 @@
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <span>Gemini Coach</span>
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v3.5 Live</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">v3.6 iOS Fix</span>
         </h1>
-        <p class="text-slate-400 text-xs">Živá synchronizace Strava & Banister model zátěže</p>
+        <p class="text-slate-400 text-xs">PWA optimalizace, vlastní dialogy & Strava Sync</p>
       </div>
     </div>
 
     <div class="flex items-center gap-2 flex-wrap">
       <button onclick="otevritStravaModal()" id="strava-btn" class="bg-[#fc4c02] hover:bg-[#e34402] text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
-        <i class="fa-brands fa-strava text-sm"></i> <span id="strava-btn-text">Strava Připojit / Sync</span>
+        <i class="fa-brands fa-strava text-sm"></i> <span id="strava-btn-text">Strava Sync</span>
       </button>
-      <button onclick="exportProGemini('komplexni')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
+      <button onclick="exportProGemini('komplexni')" id="export-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow transition">
         <i class="fa-solid fa-robot text-sm"></i> Rozebrat s Gemini
       </button>
-      <button onclick="pridatAktivituModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+      <button onclick="otevritAktivitaModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
         <i class="fa-solid fa-plus text-xs"></i> Záznam
       </button>
     </div>
   </header>
 
-  <!-- Stav synchronizace banner (pokud běží) -->
+  <!-- Stav synchronizace banner -->
   <div id="sync-status-banner" class="hidden mt-4 p-3 rounded-lg bg-orange-950/40 border border-orange-700/50 text-xs text-orange-300 flex items-center justify-between">
-    <span id="sync-status-text"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Stahuji data ze Stravy...</span>
+    <span id="sync-status-text"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Pracuji...</span>
   </div>
 
   <!-- Hlavní metriky zátěže -->
@@ -61,14 +61,310 @@
     <div class="card p-4 rounded-xl shadow-sm">
       <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Kondice (CTL)</div>
       <div class="text-2xl md:text-3xl font-black mt-1 text-cyan-400" id="ctl-val">0</div>
-      <div class="text-[11px] text-slate-400 mt-1">Dlouhodobý objem (42 dní)</div>
     </div>
     <div class="card p-4 rounded-xl shadow-sm">
       <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Únava (ATL)</div>
       <div class="text-2xl md:text-3xl font-black mt-1 text-rose-400" id="atl-val">0</div>
-      <div class="text-[11px] text-slate-400 mt-1">Akutní vyčerpání (7 dní)</div>
     </div>
     <div class="card p-4 rounded-xl shadow-sm">
-      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Forma / Čerstvost (TSB)</div>
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Forma / Čerstvost</div>
       <div class="text-2xl md:text-3xl font-black mt-1 font-mono" id="tsb-val">0</div>
-      <div class="text-[11px] font-semibold mt-1 truncate" id
+    </div>
+    <div class="card p-4 rounded-xl shadow-sm">
+      <div class="text-[10px] md:text-xs uppercase tracking-wider text-slate-400 font-bold">Týden: Stoupání</div>
+      <div class="text-2xl md:text-3xl font-black mt-1 text-amber-400" id="weekly-elev">0 <span class="text-xs font-normal text-slate-400">m</span></div>
+    </div>
+  </section>
+
+  <!-- Rozbor posledního tréninku s přímým dotazem -->
+  <section class="card p-5 rounded-xl mt-5 shadow-sm border-slate-700/80">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-magnifying-glass-chart text-orange-400"></i> Rozbor posledního tréninku
+      </h3>
+      <span class="text-[11px] font-mono text-slate-400" id="last-workout-date">-</span>
+    </div>
+    
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Aktivita</div>
+        <div class="text-sm font-bold text-slate-200 mt-1 truncate" id="last-workout-name">-</div>
+      </div>
+      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Objem / Nastoupáno</div>
+        <div class="text-sm font-bold text-amber-400 mt-1" id="last-workout-volume">-</div>
+      </div>
+      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Tepová odezva</div>
+        <div class="text-sm font-bold text-rose-400 mt-1" id="last-workout-hr">-</div>
+      </div>
+      <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Zátěž (TSS)</div>
+        <div class="text-sm font-bold text-cyan-400 mt-1" id="last-workout-tss">-</div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2 text-xs">
+      <button onclick="exportProGemini('segmenty')" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+        📊 Laps a segmenty
+      </button>
+      <button onclick="exportProGemini('posilovani')" class="bg-slate-800 hover:bg-slate-700 text-purple-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+        🏋️ Cviky z posilovny
+      </button>
+    </div>
+  </section>
+
+  <!-- Graf vývoje formy -->
+  <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-sm md:text-base font-bold text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-chart-line text-slate-400"></i> Křivka formy a adaptace
+      </h2>
+    </div>
+    <div class="relative h-56 md:h-64 w-full">
+      <canvas id="loadChart"></canvas>
+    </div>
+  </section>
+
+  <!-- Seznam stažených aktivit -->
+  <section class="card p-4 md:p-5 rounded-xl mt-5 shadow-sm">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-list-check text-slate-400"></i> Historie tréninků
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs md:text-sm text-slate-300">
+        <thead class="text-[10px] md:text-xs uppercase bg-slate-900/60 text-slate-400">
+          <tr>
+            <th class="p-2">Datum</th>
+            <th class="p-2">Typ</th>
+            <th class="p-2">Název</th>
+            <th class="p-2">Vzdál. / Výška</th>
+            <th class="p-2">Tep</th>
+            <th class="p-2">TSS</th>
+            <th class="p-2 text-right"></th>
+          </tr>
+        </thead>
+        <tbody id="activity-list" class="divide-y divide-slate-800">
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- iOS-SAFE MODAL: Přidat aktivitu (Místo Promptu) -->
+  <div id="add-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="card p-5 md:p-6 rounded-2xl max-w-md w-full shadow-2xl border-indigo-500/40">
+      <h3 class="font-bold text-lg text-slate-200 mb-4 flex items-center gap-2"><i class="fa-solid fa-plus text-indigo-400"></i> Nový ruční záznam</h3>
+      <div class="space-y-3">
+        <select id="new-typ" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+          <option value="Kolo">Kolo</option>
+          <option value="Síla">Síla</option>
+          <option value="Chůze">Chůze</option>
+          <option value="Volno">Volno</option>
+        </select>
+        <input type="text" id="new-nazev" placeholder="Název tréninku" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+        <div class="flex gap-2">
+          <input type="number" id="new-km" placeholder="Vzdálenost (km)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+          <input type="number" id="new-elev" placeholder="Nastoupáno (m)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+        </div>
+        <div class="flex gap-2">
+          <input type="number" id="new-cas" placeholder="Čas (min)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+          <input type="number" id="new-hr" placeholder="Průměrný tep" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+        </div>
+        <input type="number" id="new-tss" placeholder="TSS odhad (např. 60-120)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+      </div>
+      <div class="mt-5 flex gap-2">
+        <button onclick="ulozitNovouAktivitu()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs font-bold transition">Uložit</button>
+        <button onclick="zavritAktivitaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-xs font-semibold">Zrušit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- iOS-SAFE MODAL: Strava -->
+  <div id="strava-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="card p-6 rounded-2xl max-w-md w-full shadow-2xl border-orange-500/40">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2 text-[#fc4c02] font-black text-lg">
+          <i class="fa-brands fa-strava text-xl"></i> Strava Přihlášení
+        </div>
+      </div>
+      <p class="text-xs text-slate-300 mt-3 leading-relaxed">
+        Vlož své API klíče. Ukládají se pouze do tvého iPhonu.
+      </p>
+      <div class="mt-4 space-y-3">
+        <input type="text" id="strava-client-id" placeholder="Client ID (např. 142536)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+        <input type="password" id="strava-client-secret" placeholder="Client Secret ze Stravy" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+      </div>
+      <div class="mt-5 flex gap-2">
+        <button onclick="spustitStravaAuth()" class="flex-1 bg-[#fc4c02] hover:bg-[#e34402] text-white py-2.5 rounded-lg text-xs font-bold transition">Autorizovat</button>
+        <button onclick="zavritStravaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-xs font-semibold">Zrušit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let aktivity = JSON.parse(localStorage.getItem('strava_live_activities')) || [
+      { id: 1, datum: "2026-10-16", zdroj: "Strava", typ: "Kolo", nazev: "MTB Vysočina", km: 45, nastoupano: 780, cas: 110, avgHr: 156, tss: 135 },
+      { id: 2, datum: "2026-10-23", zdroj: "Strava", typ: "Kolo", nazev: "Podzimní Z2 vytrvalost", km: 54, nastoupano: 520, cas: 135, avgHr: 138, tss: 84 }
+    ];
+
+    function getRelativeDate(offset) {
+      const d = new Date(); d.setDate(d.getDate() + offset);
+      return d.toISOString().split('T')[0];
+    }
+
+    function ulozAktivity() {
+      localStorage.setItem('strava_live_activities', JSON.stringify(aktivity));
+      prepocitejVse();
+    }
+
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+    function otevritStravaModal() {
+      document.getElementById('strava-client-id').value = localStorage.getItem('strava_client_id') || '';
+      document.getElementById('strava-client-secret').value = localStorage.getItem('strava_client_secret') || '';
+      if (localStorage.getItem('strava_access_token')) { stahnoutAktivityZeStravy(localStorage.getItem('strava_access_token')); } 
+      else { document.getElementById('strava-modal').classList.remove('hidden'); }
+    }
+    function zavritStravaModal() { document.getElementById('strava-modal').classList.add('hidden'); }
+
+    function spustitStravaAuth() {
+      const cId = document.getElementById('strava-client-id').value.trim();
+      const cSec = document.getElementById('strava-client-secret').value.trim();
+      if (!cId || !cSec) return;
+      localStorage.setItem('strava_client_id', cId); localStorage.setItem('strava_client_secret', cSec);
+      window.location.href = `https://www.strava.com/oauth/authorize?client_id=${cId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&approval_prompt=auto&scope=read,activity:read_all`;
+    }
+
+    async function zkontrolujNavratZeStravy() {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        oznamPraci("Ověřuji kód...");
+        try {
+          const res = await fetch('https://www.strava.com/oauth/token', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: localStorage.getItem('strava_client_id'), client_secret: localStorage.getItem('strava_client_secret'), code: code, grant_type: 'authorization_code' })
+          });
+          const data = await res.json();
+          if (data.access_token) {
+            localStorage.setItem('strava_access_token', data.access_token);
+            window.history.replaceState({}, document.title, REDIRECT_URI);
+            await stahnoutAktivityZeStravy(data.access_token);
+          } else { oznamPraci("Chyba ověření.", true); }
+        } catch (e) { oznamPraci("Chyba spojení.", true); }
+      }
+    }
+
+    async function stahnoutAktivityZeStravy(token) {
+      oznamPraci("Stahuji data ze Stravy...");
+      try {
+        const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=30', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.status === 401) { localStorage.removeItem('strava_access_token'); oznamPraci("Přihlášení vypršelo, klikni na Sync znovu.", true); return; }
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          data.forEach(act => {
+            if (!aktivity.some(a => a.id === act.id)) {
+              let tss = Math.round(act.distance/1000 * 1.6 + act.total_elevation_gain/15) || 50;
+              aktivity.push({
+                id: act.id, datum: act.start_date_local.split('T')[0], zdroj: "Strava",
+                typ: (act.type.includes('Ride')) ? "Kolo" : "Ostatní", nazev: act.name,
+                km: Math.round(act.distance/1000), nastoupano: Math.round(act.total_elevation_gain), cas: Math.round(act.moving_time/60), avgHr: Math.round(act.average_heartrate)||0, tss: tss
+              });
+            }
+          });
+          ulozAktivity();
+          oznamPraci("Staženo úspěšně!", true);
+        }
+      } catch (err) { oznamPraci("Chyba stahování.", true); }
+    }
+
+    function oznamPraci(text, schovatBrzy = false) {
+      const banner = document.getElementById('sync-status-banner');
+      banner.classList.remove('hidden'); document.getElementById('sync-status-text').innerHTML = text;
+      if (schovatBrzy) setTimeout(() => banner.classList.add('hidden'), 3500);
+    }
+
+    function prepocitejVse() {
+      aktivity.sort((a, b) => new Date(a.datum) - new Date(b.datum));
+      let ctl = 52, atl = 46;
+      const dates = [], ctlData = [], atlData = [], tsbData = [];
+      for (let i = 29; i >= 0; i--) {
+        const dStr = getRelativeDate(-i);
+        const dayTSS = aktivity.filter(a => a.datum === dStr).reduce((sum, a) => sum + (Number(a.tss) || 0), 0);
+        ctl = ctl + (dayTSS - ctl) * (1 - Math.exp(-1 / 42));
+        atl = atl + (dayTSS - atl) * (1 - Math.exp(-1 / 7));
+        dates.push(dStr.slice(5)); ctlData.push(Math.round(ctl)); atlData.push(Math.round(atl)); tsbData.push(Math.round(ctl - atl));
+      }
+      document.getElementById('ctl-val').innerText = ctlData[29]; document.getElementById('atl-val').innerText = atlData[29];
+      document.getElementById('tsb-val').innerText = (tsbData[29] > 0 ? "+" : "") + tsbData[29];
+      
+      const last = aktivity[aktivity.length - 1];
+      if (last) {
+        document.getElementById('last-workout-date').innerText = last.datum; document.getElementById('last-workout-name').innerText = last.nazev;
+        document.getElementById('last-workout-volume').innerText = `${last.km} km (+${last.nastoupano || 0} m)`;
+        document.getElementById('last-workout-hr').innerText = last.avgHr > 0 ? `Ø ${last.avgHr} bpm` : '-';
+        document.getElementById('last-workout-tss').innerText = `${last.tss} TSS`;
+      }
+
+      const tydenTSS = aktivity.filter(a => new Date(a.datum) >= new Date(new Date().setDate(new Date().getDate() - 7))).reduce((s, a) => s + (Number(a.nastoupano) || 0), 0);
+      document.getElementById('weekly-elev').innerHTML = `${tydenTSS} <span class="text-xs font-normal text-slate-400">m</span>`;
+      
+      vykresliTabulku(); aktualizujGraf(dates, ctlData, atlData, tsbData);
+    }
+
+    function vykresliTabulku() {
+      document.getElementById('activity-list').innerHTML = aktivity.reverse().slice(0, 10).map(a => `
+        <tr class="border-b border-slate-800/60">
+          <td class="p-2 font-mono text-[11px] text-slate-400">${a.datum.slice(5)}</td>
+          <td class="p-2 text-xs">${a.typ}</td>
+          <td class="p-2 font-medium text-slate-200 text-xs">${a.nazev}</td>
+          <td class="p-2 text-xs text-slate-300">${a.km > 0 ? a.km + 'km /+' + a.nastoupano + 'm' : '-'}</td>
+          <td class="p-2 text-xs">${a.avgHr > 0 ? a.avgHr + ' bpm' : '-'}</td>
+          <td class="p-2 text-amber-400 text-xs font-bold">${a.tss}</td>
+          <td class="p-2 text-right"><button onclick="smazatAktivitu(${a.id})" class="text-rose-400"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`).join('');
+      aktivity.reverse(); // vratit razeni
+    }
+
+    let chartInst = null;
+    function aktualizujGraf(labels, ctl, atl, tsb) {
+      if (chartInst) chartInst.destroy();
+      chartInst = new Chart(document.getElementById('loadChart').getContext('2d'), {
+        type: 'line', data: { labels, datasets: [
+          { label: 'CTL', data: ctl, borderColor: '#22d3ee', borderWidth: 2, tension: 0.3, pointRadius: 0 },
+          { label: 'ATL', data: atl, borderColor: '#fb7185', borderWidth: 2, tension: 0.3, pointRadius: 0 },
+          { label: 'TSB', data: tsb, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.08)', fill: true, borderWidth: 1.5, tension: 0.2, pointRadius: 0 }
+        ]}, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+      });
+    }
+
+    function otevritAktivitaModal() { document.getElementById('add-modal').classList.remove('hidden'); }
+    function zavritAktivitaModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
+    function ulozitNovouAktivitu() {
+      aktivity.push({
+        id: Date.now(), datum: new Date().toISOString().split('T')[0], zdroj: "Manual",
+        typ: document.getElementById('new-typ').value, nazev: document.getElementById('new-nazev').value || "Nový trénink",
+        km: Number(document.getElementById('new-km').value) || 0, nastoupano: Number(document.getElementById('new-elev').value) || 0,
+        cas: Number(document.getElementById('new-cas').value) || 0, avgHr: Number(document.getElementById('new-hr').value) || 0,
+        tss: Number(document.getElementById('new-tss').value) || 50
+      });
+      ulozAktivity(); zavritAktivitaModal();
+    }
+
+    function smazatAktivitu(id) { aktivity = aktivity.filter(a => a.id !== id); ulozAktivity(); }
+
+    function exportProGemini(tema) {
+      const text = `Ahoj, aktuální CTL: ${document.getElementById('ctl-val').innerText}, ATL: ${document.getElementById('atl-val').innerText}, TSB: ${document.getElementById('tsb-val').innerText}.\nPoslední jízda: ${JSON.stringify(aktivity[aktivity.length - 1])}\nTéma dotazu: ${tema}.`;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('export-btn'); const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check text-sm"></i> Zkopírováno!'; btn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+        setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-emerald-600', 'bg-indigo-600'); }, 3000);
+      });
+    }
+
+    prepocitejVse(); zkontrolujNavratZeStravy();
+  </script>
+</body>
+</html>
